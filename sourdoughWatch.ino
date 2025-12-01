@@ -6,8 +6,9 @@
 // ------------------------------------------------------
 // WIFI — HARD CODED
 // ------------------------------------------------------
-const char* WIFI_SSID = "SSID";
-const char* WIFI_PASS = "WPA_PSK";
+const char* WIFI_SSID = "NETWORK_SSID";
+const char* WIFI_PASS = "NETWORK_WPA_PSK";
+const char* NTFY_URL = "NOTIFY_URL";
 
 // ------------------------------------------------------
 // GLOBALS
@@ -156,12 +157,13 @@ void drawDashboardDynamic() {
 // ------------------------------------------------------
 bool sendSourdoughAlert() {
   if (WiFi.status() != WL_CONNECTED) return false;
-  if (!sslClient.connect("notify.ai6k.com", 443)) return false;
+  if (!sslClient.connect(NTFY_URL, 443)) return false;
 
   String body = "Starter doubled! Rise: " + String(risePercent, 1) + "%";
 
   sslClient.println("POST /sourdough HTTP/1.1");
-  sslClient.println("Host: notify.ai6k.com");
+  sslClient.print("Host: ");
+  sslClient.println(NTFY_URL);
   sslClient.println("Content-Type: text/plain");
   sslClient.print("Content-Length: ");
   sslClient.println(body.length());
