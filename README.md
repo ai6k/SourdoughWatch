@@ -1,19 +1,19 @@
 # SourdoughWatch
 
-SourdoughWatch is a hardware + software project that monitors the health of a sourdough starter using an Arduino Giga R1, sensors, and a 3.2" ILI9341 TFT display. It tracks temperature, humidity, rise activity, and feeding cycles, displaying everything on a clear, simple UI.
+SourdoughWatch is a hardware + software project that monitors the health of a sourdough starter using an Arduino Giga R1, sensors, and a 3.2" ILI9341 TFT display. It tracks temperature, humidity, rise activity, and feeding cycles, and shows everything on a simple, easy-to-read screen.
 
-The project also uses a 3D-printed wide-mouth mason jar lid to mount the hardware.
+The electronics are mounted in a 3D-printed wide-mouth mason jar lid.
 
 ---
 
 ## Features
 
-- Real-time starter monitoring  
-- Temperature and humidity tracking  
-- Time since last feed (reset cycle)  
-- Clear TFT display interface  
-- Physical "Reset Cycle" button  
-- Enclosure uses a 3D-printed mason jar lid
+- Real-time sourdough starter monitoring
+- Temperature and humidity tracking
+- Time since last feed (reset cycle)
+- Simple TFT display user interface
+- Physical "Reset Cycle" button
+- Uses a 3D-printed lid for a wide-mouth mason jar
 
 ---
 
@@ -24,35 +24,39 @@ This project uses a 3D-printed lid designed for wide-mouth mason jars.
 Original model by **Dan.K** on Printables:  
 https://www.printables.com/model/174724-wide-mouth-mason-jar-lid
 
+You can print the lid as-is or modify it to suit your display and sensor layout.
+
 ---
 
 ## Hardware Used
 
-- Arduino Giga R1  
-- 3.2" ILI9341 SPI TFT Display  
-- DHT22 or AHT20 temperature/humidity sensor  
-- Pushbutton for reset cycle  
-- 3D-printed mason jar lid  
-- Assorted jumper wires  
-- USB-C or 5V power source
+- Arduino Giga R1
+- 3.2" ILI9341 SPI TFT display
+- DHT22 or AHT20 temperature/humidity sensor
+- Pushbutton for reset cycle
+- 3D-printed wide-mouth mason jar lid
+- Assorted jumper wires
+- USB-C cable or 5V power source
 
 ---
 
 ## Wiring Overview
 
+Actual pin assignments in your sketch take precedence, but a typical setup looks like this:
+
 ### TFT Display (ILI9341 over SPI)
 
 | TFT Pin | Arduino Giga R1 Pin |
 |---------|----------------------|
-| VCC     | 5V                  |
-| GND     | GND                 |
-| CS      | D10 (example)       |
-| RESET   | D9                  |
-| DC      | D8                  |
-| MOSI    | MOSI (D11)          |
-| MISO    | MISO (D12)          |
-| SCK     | SCK (D13)           |
-| LED     | 3.3–5V (optional series resistor) |
+| VCC     | 5V                   |
+| GND     | GND                  |
+| CS      | D10 (example)        |
+| RESET   | D9                   |
+| DC      | D8                   |
+| MOSI    | MOSI (D11)           |
+| MISO    | MISO (D12)           |
+| SCK     | SCK (D13)            |
+| LED     | 3.3–5V (optionally through a resistor) |
 
 ### Temperature/Humidity Sensor (DHT22 / AHT20)
 
@@ -69,8 +73,6 @@ https://www.printables.com/model/174724-wide-mouth-mason-jar-lid
 | One side   | D6          |
 | Other side | GND         |
 
-(If you want, I can generate a wiring diagram image.)
-
 ---
 
 ## Installation
@@ -80,3 +82,33 @@ https://www.printables.com/model/174724-wide-mouth-mason-jar-lid
    ```bash
    git clone https://github.com/ai6k/SourdoughWatch.git
    cd SourdoughWatch
+   ```
+
+2. Open the `.ino` file in the **Arduino IDE**.
+
+3. Install the required libraries (via Library Manager or manually):
+   - Adafruit_GFX
+   - Adafruit_ILI9341
+   - DHT sensor library or Adafruit AHTX0
+   - Any other libraries referenced at the top of the sketch
+
+4. In the Arduino IDE, select:
+   - **Board:** Arduino Giga R1
+   - **Port:** the port your board is connected to
+
+5. Click **Upload** to flash the sketch to the board.
+
+---
+
+## Future Enhancements
+
+- WiFi logging and historical graphs
+- Weight/scale integration for more accurate rise tracking
+- Mobile or web notifications
+- Different lid/enclosure styles for other jar sizes
+
+---
+
+## License
+
+This project is open-source under the MIT License.
