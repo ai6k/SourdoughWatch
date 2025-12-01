@@ -6,8 +6,8 @@
 // ------------------------------------------------------
 // WIFI — HARD CODED
 // ------------------------------------------------------
-const char* WIFI_SSID = "Berkompas_2GHz";
-const char* WIFI_PASS = "46284433";
+const char* WIFI_SSID = "YOUR_SSID";
+const char* WIFI_PASS = "YOUR_PASSWORD";
 
 // ------------------------------------------------------
 // GLOBALS
@@ -29,12 +29,9 @@ bool wifiConnected = false;
 bool touchActive = false;
 
 // ------------------------------------------------------
-// TOUCH MAPPING (rotation=1, horizontal layout)
+// TOUCH MAPPING — horizontal rotation(1)
 // Verified from your calibration:
-// UL: (468,7)
-// UR: (466,788)
-// LL: (6,6)
-// LR: (6,786)
+// UL: (468,7), UR: (466,788), LL: (6,6), LR: (6,786)
 //
 // rawY → X (normal direction)
 // rawX → Y (reversed direction)
@@ -51,12 +48,13 @@ bool getTouchPoint(int &tx, int &ty) {
   int rawX = pts[0].x;
   int rawY = pts[0].y;
 
-  // X axis
+  // X axis (normal)
   tx = map(rawY,   6, 788, 0, 800);
 
   // Y axis (reversed)
   ty = map(rawX, 468,   6, 0, 480);
 
+  // Tap debounce
   if (touchActive) return false;
   touchActive = true;
 
@@ -81,22 +79,23 @@ void drawHeader() {
   display.print("Sourdough Monitor");
 }
 
-void drawPanel(int x, int y, int w, int h, const char* label, const char* value, uint16_t bg) {
-  display.drawRect(x, y, w, h, 0xFFFF);
-  display.fillRect(x + 1, y + 1, w - 2, h - 2, bg);
+void drawPanel(int x, int y, int w, int h,
+               const char* label, const char* value, uint16_t bg) {
 
-  // Label (L2 size = 3)
+  // Border + background
+  display.drawRect(x, y, w, h, 0xFFFF);
+  display.fillRect(x+1, y+1, w-2, h-2, bg);
+
+  // Label — medium (L2)
   display.setTextColor(0xFFFF);
   display.setTextSize(3);
   display.setCursor(x + 10, y + 10);
   display.print(label);
 
-  // Value (large, L2 style = size 4)
+  // Value — large (size 4)
   display.setTextSize(4);
-
   int textX = x + (w / 2) - (strlen(value) * 11);
   int textY = y + (h / 2) + 10;
-
   display.setCursor(textX, textY);
   display.print(value);
 }
@@ -110,23 +109,21 @@ void drawRiseBar(float percent, int x, int y, int w, int h) {
     (percent >= 70)  ? 0xFFE0 :
                        0xFD20;
 
-  display.fillRect(x + 1, y + 1, w - 2, h - 2, 0x0000);
-
-  if (fillWidth > 0) {
-    display.fillRect(x + 1, y + 1, fillWidth - 2, h - 2, color);
-  }
+  display.fillRect(x+1, y+1, w-2, h-2, 0x0000);
+  if (fillWidth > 0)
+    display.fillRect(x+1, y+1, fillWidth-2, h-2, color);
 }
 
 void drawDashboardStatic() {
   display.fillScreen(0x0000);
   drawHeader();
 
-  // Panel borders
+  // Static panel borders
   display.drawRect(20,  80, 240, 150, 0xFFFF);
   display.drawRect(280, 80, 240, 150, 0xFFFF);
   display.drawRect(540, 80, 240, 150, 0xFFFF);
 
-  // Rise bar
+  // Rise bar border
   display.drawRect(20, 240, 760, 40, 0xFFFF);
 
   // Reset button
@@ -147,10 +144,9 @@ void drawDashboardDynamic() {
     (risePercent >= 70)  ? 0xFFE0 :
                            0xFD20;
 
-  // Panels
   drawPanel(20,  80, 240, 150, "Temperature", tbuf, 0x001F);
   drawPanel(280, 80, 240, 150, "Humidity",    hbuf, 0x03A0);
-  drawPanel(540, 80, 240, 150, "Rise",       rbuf, riseColor);
+  drawPanel(540, 80, 240, 150, "Rise",        rbuf, riseColor);
 
   drawRiseBar(risePercent, 20, 240, 760, 40);
 }
@@ -172,6 +168,7 @@ bool sendSourdoughAlert() {
   sslClient.println("Connection: close");
   sslClient.println();
   sslClient.print(body);
+
   sslClient.stop();
   return true;
 }
@@ -209,7 +206,7 @@ void setup() {
 void loop() {
 
   // -----------------------------
-  // METRICS ENDPOINT
+  // PROMETHEUS METRICS ENDPOINT
   // -----------------------------
   if (wifiConnected) {
     WiFiClient client = server.available();
@@ -232,15 +229,15 @@ void loop() {
         out += "# TYPE sourdough_humidity_percent gauge\n";
         out += "sourdough_humidity_percent " + String(humidityVal, 2) + "\n\n";
 
-        out += "# HELP sourdough_rise_percent Starter rise progress\n";
+        out += "# HELP sourdough_rise_percent Starter rise percent\n";
         out += "# TYPE sourdough_rise_percent gauge\n";
         out += "sourdough_rise_percent " + String(risePercent, 2) + "\n\n";
 
-        out += "# HELP sourdough_rise_doubled Starter doubled flag\n";
+        out += "# HELP sourdough_rise_doubled Starter doubled (0/1)\n";
         out += "# TYPE sourdough_rise_doubled gauge\n";
         out += "sourdough_rise_doubled " + String(risePercent >= 100 ? 1 : 0) + "\n\n";
 
-        out += "# HELP sourdough_wifi_connected WiFi status\n";
+        out += "# HELP sourdough_wifi_connected WiFi connected (0/1)\n";
         out += "# TYPE sourdough_wifi_connected gauge\n";
         out += "sourdough_wifi_connected " + String(wifiConnected ? 1 : 0) + "\n\n";
 
@@ -260,19 +257,20 @@ void loop() {
   }
 
   // -----------------------------
-  // DASHBOARD UPDATE (1s)
+  // DASHBOARD UPDATE (every 1s)
   // -----------------------------
   unsigned long now = millis();
   if (now - lastUpdate >= 1000) {
     lastUpdate = now;
 
-    tempF       += (random(-5,6)*0.1);
-    humidityVal += (random(-3,4)*0.1);
-    risePercent += (random(0,5)*0.2);
+    // Simulated sensor data
+    tempF       += (random(-5,6) * 0.1);
+    humidityVal += (random(-3,4) * 0.1);
+    risePercent += (random(0,5) * 0.2);
 
-    tempF       = constrain(tempF, 68,82);
-    humidityVal = constrain(humidityVal,50,75);
-    risePercent = constrain(risePercent, 0,120);
+    tempF       = constrain(tempF, 68, 82);
+    humidityVal = constrain(humidityVal, 50, 75);
+    risePercent = constrain(risePercent, 0, 120);
 
     drawDashboardDynamic();
 
@@ -288,8 +286,8 @@ void loop() {
   // -----------------------------
   int tx, ty;
   if (getTouchPoint(tx, ty)) {
-
-    if (inRect(100, 320, 220, 60, tx, ty)) {
+    // Reset button
+    if (inRect(100, 320, 250, 60, tx, ty)) {
       risePercent = 0;
       alertSent = false;
       drawDashboardDynamic();
