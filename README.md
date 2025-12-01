@@ -4,6 +4,10 @@ SourdoughWatch is a hardware + software project that monitors the health of a so
 
 The electronics are mounted in a 3D-printed wide-mouth mason jar lid.
 
+Replace NETWORK_SSID and NETWORK_PASS if you want prometheus metrics served direclty from the Giga R1.
+
+Replace NTFY_URL if you want alerts sent via ntfy (https://ntfy.sh/)
+
 ---
 
 ## Features
