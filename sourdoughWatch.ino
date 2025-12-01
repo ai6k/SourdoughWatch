@@ -6,8 +6,8 @@
 // ------------------------------------------------------
 // WIFI — HARD CODED
 // ------------------------------------------------------
-const char* WIFI_SSID = "YOUR_SSID";
-const char* WIFI_PASS = "YOUR_PASSWORD";
+const char* WIFI_SSID = "SSID";
+const char* WIFI_PASS = "WPA_PSK";
 
 // ------------------------------------------------------
 // GLOBALS
@@ -270,7 +270,7 @@ void loop() {
 
     tempF       = constrain(tempF, 68, 82);
     humidityVal = constrain(humidityVal, 50, 75);
-    risePercent = constrain(risePercent, 0, 120);
+    risePercent = constrain(risePercent, 0, 75);
 
     drawDashboardDynamic();
 
