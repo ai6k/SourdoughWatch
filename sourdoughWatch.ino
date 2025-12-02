@@ -1,14 +1,15 @@
 #include <Arduino_GigaDisplay_GFX.h>
 #include <Arduino_GigaDisplayTouch.h>
 #include <WiFi.h>
-#include <WiFiSSLClient.h>
+//#include <WiFiSSLClient.h>
 
 // ------------------------------------------------------
 // WIFI — HARD CODED
 // ------------------------------------------------------
-const char* WIFI_SSID = "NETWORK_SSID";
-const char* WIFI_PASS = "NETWORK_WPA_PSK";
-const char* NTFY_URL = "NOTIFY_URL";
+const char* WIFI_SSID = "SSID";
+const char* WIFI_PASS = "WPA_PSK";
+const char* NTFY_URL = "192.168.1.42";
+const int NTFY_PORT = 80;
 
 // ------------------------------------------------------
 // GLOBALS
@@ -24,7 +25,8 @@ unsigned long lastUpdate = 0;
 bool alertSent = false;
 
 WiFiServer server(80);
-WiFiSSLClient sslClient;
+//WiFiSSLClient sslClient;
+WiFiClient client;
 bool wifiConnected = false;
 
 bool touchActive = false;
@@ -107,7 +109,7 @@ void drawRiseBar(float percent, int x, int y, int w, int h) {
 
   uint16_t color =
     (percent >= 100) ? 0xF800 :
-    (percent >= 70)  ? 0xFFE0 :
+    (percent >= 70)  ? 0xEDC9 :
                        0xFD20;
 
   display.fillRect(x+1, y+1, w-2, h-2, 0x0000);
@@ -142,7 +144,7 @@ void drawDashboardDynamic() {
 
   uint16_t riseColor =
     (risePercent >= 100) ? 0xF800 :
-    (risePercent >= 70)  ? 0xFFE0 :
+    (risePercent >= 70)  ? 0xEDC9 :
                            0xFD20;
 
   drawPanel(20,  80, 240, 150, "Temperature", tbuf, 0x001F);
@@ -157,21 +159,21 @@ void drawDashboardDynamic() {
 // ------------------------------------------------------
 bool sendSourdoughAlert() {
   if (WiFi.status() != WL_CONNECTED) return false;
-  if (!sslClient.connect(NTFY_URL, 443)) return false;
+  if (!client.connect(NTFY_URL, NTFY_PORT)) return false;
 
   String body = "Starter doubled! Rise: " + String(risePercent, 1) + "%";
 
-  sslClient.println("POST /sourdough HTTP/1.1");
-  sslClient.print("Host: ");
-  sslClient.println(NTFY_URL);
-  sslClient.println("Content-Type: text/plain");
-  sslClient.print("Content-Length: ");
-  sslClient.println(body.length());
-  sslClient.println("Connection: close");
-  sslClient.println();
-  sslClient.print(body);
+  client.println("POST /sourdough HTTP/1.1");
+  client.print("Host: ");
+  client.println(NTFY_URL);
+  client.println("Content-Type: text/plain");
+  client.print("Content-Length: ");
+  client.println(body.length());
+  client.println("Connection: close");
+  client.println();
+  client.print(body);
 
-  sslClient.stop();
+  client.stop();
   return true;
 }
 
@@ -272,7 +274,7 @@ void loop() {
 
     tempF       = constrain(tempF, 68, 82);
     humidityVal = constrain(humidityVal, 50, 75);
-    risePercent = constrain(risePercent, 0, 75);
+    risePercent = constrain(risePercent, 0, 120);
 
     drawDashboardDynamic();
 
