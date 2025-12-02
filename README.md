@@ -1,3 +1,6 @@
+## NOTE
+The sensors haven't been incorporated yet, I'm waiting for them to arrive from Adafruit.
+
 # SourdoughWatch
 
 SourdoughWatch is a hardware + software project that monitors the health of a sourdough starter using an Arduino Giga R1, sensors, and a 3.2" ILI9341 TFT display. It tracks temperature, humidity, rise activity, and feeding cycles, and shows everything on a simple, easy-to-read screen.
