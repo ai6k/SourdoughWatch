@@ -1,5 +1,5 @@
 ## NOTE
-The sensors haven't been incorporated yet, I'm waiting for them to arrive from Adafruit.
+The sensor code hasn't been incorporated yet, I'm waiting for them to arrive from Adafruit.
 
 # SourdoughWatch
 
