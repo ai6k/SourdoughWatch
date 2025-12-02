@@ -1,15 +1,29 @@
 #include <Arduino_GigaDisplay_GFX.h>
 #include <Arduino_GigaDisplayTouch.h>
 #include <WiFi.h>
-//#include <WiFiSSLClient.h>
 
 // ------------------------------------------------------
 // WIFI — HARD CODED
 // ------------------------------------------------------
 const char* WIFI_SSID = "SSID";
 const char* WIFI_PASS = "WPA_PSK";
-const char* NTFY_URL = "192.168.1.42";
-const int NTFY_PORT = 80;
+
+const char* NTFY_URL  = "192.168.1.42";   // ntfy server IP or hostname
+const int   NTFY_PORT = 80;               // port for LAN ntfy
+
+// ------------------------------------------------------
+// DNS CONFIG — user-editable like NTFY_URL
+// ------------------------------------------------------
+const char* DNS1_STR = "192.168.1.50";    // Pi-hole DNS
+const char* DNS2_STR = "1.1.1.1";         // fallback DNS (Cloudflare)
+
+IPAddress DNS1;
+IPAddress DNS2;
+
+void initDNS() {
+  DNS1.fromString(DNS1_STR);
+  DNS2.fromString(DNS2_STR);
+}
 
 // ------------------------------------------------------
 // GLOBALS
@@ -25,7 +39,6 @@ unsigned long lastUpdate = 0;
 bool alertSent = false;
 
 WiFiServer server(80);
-//WiFiSSLClient sslClient;
 WiFiClient client;
 bool wifiConnected = false;
 
@@ -33,11 +46,10 @@ bool touchActive = false;
 
 // ------------------------------------------------------
 // TOUCH MAPPING — horizontal rotation(1)
-// Verified from your calibration:
+// Based on your confirmed calibration:
 // UL: (468,7), UR: (466,788), LL: (6,6), LR: (6,786)
-//
-// rawY → X (normal direction)
-// rawX → Y (reversed direction)
+// rawY → X (normal)
+// rawX → Y (reversed)
 // ------------------------------------------------------
 bool getTouchPoint(int &tx, int &ty) {
   GDTpoint_t pts[5];
@@ -51,13 +63,11 @@ bool getTouchPoint(int &tx, int &ty) {
   int rawX = pts[0].x;
   int rawY = pts[0].y;
 
-  // X axis (normal)
-  tx = map(rawY,   6, 788, 0, 800);
+  // Mapped coordinates
+  tx = map(rawY,   6, 788, 0, 800);   // X = width 800
+  ty = map(rawX, 468,   6, 0, 480);   // Y = height 480 (reversed)
 
-  // Y axis (reversed)
-  ty = map(rawX, 468,   6, 0, 480);
-
-  // Tap debounce
+  // Simple debounce
   if (touchActive) return false;
   touchActive = true;
 
@@ -85,17 +95,14 @@ void drawHeader() {
 void drawPanel(int x, int y, int w, int h,
                const char* label, const char* value, uint16_t bg) {
 
-  // Border + background
   display.drawRect(x, y, w, h, 0xFFFF);
   display.fillRect(x+1, y+1, w-2, h-2, bg);
 
-  // Label — medium (L2)
   display.setTextColor(0xFFFF);
   display.setTextSize(3);
   display.setCursor(x + 10, y + 10);
   display.print(label);
 
-  // Value — large (size 4)
   display.setTextSize(4);
   int textX = x + (w / 2) - (strlen(value) * 11);
   int textY = y + (h / 2) + 10;
@@ -121,15 +128,12 @@ void drawDashboardStatic() {
   display.fillScreen(0x0000);
   drawHeader();
 
-  // Static panel borders
   display.drawRect(20,  80, 240, 150, 0xFFFF);
   display.drawRect(280, 80, 240, 150, 0xFFFF);
   display.drawRect(540, 80, 240, 150, 0xFFFF);
 
-  // Rise bar border
   display.drawRect(20, 240, 760, 40, 0xFFFF);
 
-  // Reset button
   display.drawRect(100, 320, 250, 60, 0xFFFF);
   display.setTextColor(0xFFFF);
   display.setTextSize(3);
@@ -155,7 +159,7 @@ void drawDashboardDynamic() {
 }
 
 // ------------------------------------------------------
-// ALERT
+// ALERT — LAN ntfy (HTTP)
 // ------------------------------------------------------
 bool sendSourdoughAlert() {
   if (WiFi.status() != WL_CONNECTED) return false;
@@ -192,6 +196,10 @@ void setup() {
   drawDashboardStatic();
   drawDashboardDynamic();
 
+  // DNS first, before WiFi.begin()
+  initDNS();
+  WiFi.setDNS(DNS1, DNS2);
+
   WiFi.begin(WIFI_SSID, WIFI_PASS);
   int attempts = 0;
 
@@ -213,12 +221,12 @@ void loop() {
   // PROMETHEUS METRICS ENDPOINT
   // -----------------------------
   if (wifiConnected) {
-    WiFiClient client = server.available();
-    if (client) {
-      while (client.connected() && !client.available()) delay(1);
+    WiFiClient cli = server.available();
+    if (cli) {
+      while (cli.connected() && !cli.available()) delay(1);
 
-      String req = client.readStringUntil('\r');
-      client.readStringUntil('\n');
+      String req = cli.readStringUntil('\r');
+      cli.readStringUntil('\n');
 
       if (req.startsWith("GET /metrics")) {
         unsigned long nowSec = millis() / 1000;
@@ -249,19 +257,19 @@ void loop() {
         out += "# TYPE sourdough_last_update_seconds gauge\n";
         out += "sourdough_last_update_seconds " + String(nowSec) + "\n";
 
-        client.println("HTTP/1.1 200 OK");
-        client.println("Content-Type: text/plain; version=0.0.4");
-        client.println("Connection: close");
-        client.println();
-        client.print(out);
+        cli.println("HTTP/1.1 200 OK");
+        cli.println("Content-Type: text/plain; version=0.0.4");
+        cli.println("Connection: close");
+        cli.println();
+        cli.print(out);
       }
 
-      client.stop();
+      cli.stop();
     }
   }
 
   // -----------------------------
-  // DASHBOARD UPDATE (every 1s)
+  // DASHBOARD UPDATE (1s)
   // -----------------------------
   unsigned long now = millis();
   if (now - lastUpdate >= 1000) {
@@ -278,15 +286,17 @@ void loop() {
 
     drawDashboardDynamic();
 
+    // Send alert on doubling
     if (risePercent >= 100 && !alertSent) {
       if (sendSourdoughAlert()) alertSent = true;
     }
 
+    // Reset alert when low
     if (risePercent < 60) alertSent = false;
   }
 
   // -----------------------------
-  // TOUCH HANDLING
+  // TOUCH
   // -----------------------------
   int tx, ty;
   if (getTouchPoint(tx, ty)) {
