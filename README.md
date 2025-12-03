@@ -1,5 +1,6 @@
 ## NOTE
 The sensor code hasn't been incorporated yet, I'm waiting for them to arrive from Adafruit.
+The Giga R1 takes advantage of the Giga Touchscreen, while the Sparkfun Thing Plus uses a Webserver.
 
 # SourdoughWatch
 
