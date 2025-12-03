@@ -4,13 +4,15 @@ The Giga R1 takes advantage of the Giga Touchscreen, while the Sparkfun Thing Pl
 
 # SourdoughWatch
 
-SourdoughWatch is a hardware + software project that monitors the health of a sourdough starter using an Arduino Giga R1, sensors, and a 3.2" ILI9341 TFT display. It tracks temperature, humidity, rise activity, and feeding cycles, and shows everything on a simple, easy-to-read screen.
+SourdoughWatch is a hardware + software project that monitors the health of a sourdough starter using an Arduino Giga R1 or Sparkfun Thinng Plus, sensors, and a 3.2" ILI9341 TFT display (Giga R1 only). It tracks temperature, humidity, rise activity, and feeding cycles, and shows everything on a simple, easy-to-read screen/webserver.
 
 The electronics are mounted in a 3D-printed wide-mouth mason jar lid.
 
-Replace NETWORK_SSID and NETWORK_PASS if you want prometheus metrics served direclty from the Giga R1.
+Replace NETWORK_SSID and NETWORK_PASS if you want prometheus metrics served direclty from the Giga R1/Thing Plus.
 
-Replace NTFY_URL if you want alerts sent via ntfy (https://ntfy.sh/)
+Replace NTFY_HOST, NTFY_PORT and NTFY_PATH if you want alerts sent via ntfy (https://ntfy.sh/)
+
+If you have a different DNS (maybe Pi-Hole), replace DNS1_STR.
 
 ---
 
