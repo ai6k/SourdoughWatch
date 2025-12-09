@@ -2,6 +2,10 @@
 The sensor code hasn't been incorporated yet, I'm waiting for them to arrive from Adafruit.
 The Giga R1 takes advantage of the Giga Touchscreen, while the Sparkfun Thing Plus uses a Webserver.
 
+## NOTE 2
+This project was created due to my reading the following article:
+https://ivanahuckova.medium.com/how-i-created-sourdough-monitoring-system-and-how-can-you-easily-make-one-too-58f9a65c43c5
+
 # SourdoughWatch
 
 SourdoughWatch is a hardware + software project that monitors the health of a sourdough starter using an Arduino Giga R1 or Sparkfun Thinng Plus, sensors, and a 3.2" ILI9341 TFT display (Giga R1 only). It tracks temperature, humidity, rise activity, and feeding cycles, and shows everything on a simple, easy-to-read screen/webserver.
