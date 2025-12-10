@@ -4,6 +4,7 @@ The Giga R1 takes advantage of the Giga Touchscreen, while the Sparkfun Thing Pl
 
 ## NOTE 2
 This project was created due to my reading the following article:
+
 https://ivanahuckova.medium.com/how-i-created-sourdough-monitoring-system-and-how-can-you-easily-make-one-too-58f9a65c43c5
 
 # SourdoughWatch
