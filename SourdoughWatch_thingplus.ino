@@ -1,5 +1,16 @@
 #include <WiFi.h>
 #include <WebServer.h>
+#include <Wire.h>
+#include <Adafruit_AHTX0.h>
+
+// ------------------------------------------------------
+// AHT20 SENSOR CONFIG, Change to reflect your board, possibly 21/22
+// ------------------------------------------------------
+#define SDA_PIN 23        // SparkFun Thing Plus Micro-B SDA
+#define SCL_PIN 22        // SparkFun Thing Plus Micro-B SCL
+
+Adafruit_AHTX0 aht;
+bool sensorOK = false;
 
 // ------------------------------------------------------
 // WIFI / NETWORK CONFIG
@@ -7,14 +18,12 @@
 const char* WIFI_SSID = "SSID";
 const char* WIFI_PASS = "WPA_PSK";
 
-// ntfy LAN endpoint (no HTTPS here, just HTTP on LAN)
-const char* NTFY_HOST = "192.168.1.2";  // ntfy host/IP
+const char* NTFY_HOST = "192.168.1.2";
 const uint16_t NTFY_PORT = 80;
 const char* NTFY_PATH = "/sourdough";
 
-// Optional Pi-hole or custom DNS
-const char* DNS1_STR = "192.168.1.36";   // Pi-hole
-const char* DNS2_STR = "1.1.1.1";        // fallback (Cloudflare), or Google 8.8.8.8
+const char* DNS1_STR = "192.168.1.36";
+const char* DNS2_STR = "1.1.1.1";
 
 IPAddress DNS1;
 IPAddress DNS2;
@@ -33,7 +42,7 @@ bool wifiConnected       = false;
 WebServer server(80);
 
 // ------------------------------------------------------
-// DNS INIT (optional but nice)
+// DNS INIT
 // ------------------------------------------------------
 void initDNS() {
   DNS1.fromString(DNS1_STR);
@@ -71,7 +80,7 @@ bool sendSourdoughAlert() {
   unsigned long start = millis();
   while (client.connected() && millis() - start < 2000) {
     while (client.available()) {
-      client.read(); // discard response
+      client.read();
       start = millis();
     }
   }
@@ -81,13 +90,12 @@ bool sendSourdoughAlert() {
 }
 
 // ------------------------------------------------------
-// PROMETHEUS HANDLER: GET /metrics
+// PROMETHEUS HANDLER
 // ------------------------------------------------------
 void handleMetrics() {
   unsigned long nowSec = millis() / 1000;
 
   String out;
-
   out += "# HELP sourdough_temperature_fahrenheit Current temperature\n";
   out += "# TYPE sourdough_temperature_fahrenheit gauge\n";
   out += "sourdough_temperature_fahrenheit " + String(tempF, 2) + "\n\n";
@@ -116,7 +124,7 @@ void handleMetrics() {
 }
 
 // ------------------------------------------------------
-// STATUS HANDLER: GET /status  (JSON)
+// STATUS HANDLER (JSON)
 // ------------------------------------------------------
 void handleStatus() {
   String out = "{";
@@ -131,7 +139,7 @@ void handleStatus() {
 }
 
 // ------------------------------------------------------
-// RESET HANDLER: POST /reset
+// RESET HANDLER
 // ------------------------------------------------------
 void handleReset() {
   risePercent = 0;
@@ -140,8 +148,7 @@ void handleReset() {
 }
 
 // ------------------------------------------------------
-// ROOT PAGE: GET /
-// Simple mobile-friendly dashboard
+// ROOT HTML DASHBOARD
 // ------------------------------------------------------
 void handleRoot() {
   String html = R"HTML(
@@ -152,60 +159,16 @@ void handleRoot() {
   <title>Sourdough Monitor</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body {
-      background:#111;
-      color:#eee;
-      font-family: system-ui, -apple-system, sans-serif;
-      padding:16px;
-    }
-    .card {
-      border:1px solid #444;
-      border-radius:12px;
-      padding:16px;
-      margin-bottom:16px;
-      background:#222;
-    }
-    .label {
-      font-size:14px;
-      text-transform:uppercase;
-      letter-spacing:1px;
-      color:#aaa;
-      margin-bottom:4px;
-    }
-    .value {
-      font-size:28px;
-      font-weight:600;
-    }
-    .rise-bar {
-      width:100%;
-      height:18px;
-      border-radius:9px;
-      background:#333;
-      overflow:hidden;
-      margin-top:8px;
-    }
-    .rise-fill {
-      height:100%;
-      background:linear-gradient(90deg,#f4a300,#f83737);
-      width:0%;
-    }
-    button {
-      width:100%;
-      padding:12px;
-      border-radius:999px;
-      border:none;
-      font-size:16px;
-      font-weight:600;
-      color:#111;
-      background:#f4a300;
-      margin-top:8px;
-    }
-    button:active {
-      transform:scale(0.98);
-    }
-    .ok { color:#7CFC00; }
-    .bad { color:#ff5555; }
-    .small { font-size:12px; color:#888; margin-top:8px; }
+  body { background:#111; color:#eee; font-family:system-ui; padding:16px; }
+  .card { border:1px solid #444; border-radius:12px; padding:16px; margin-bottom:16px; background:#222; }
+  .label { font-size:14px; text-transform:uppercase; color:#aaa; margin-bottom:4px; }
+  .value { font-size:28px; font-weight:600; }
+  .rise-bar { width:100%; height:18px; border-radius:9px; background:#333; overflow:hidden; margin-top:8px; }
+  .rise-fill { height:100%; background:linear-gradient(90deg,#f4a300,#f83737); width:0%; }
+  button { width:100%; padding:12px; border-radius:999px; border:none; font-size:16px; font-weight:600; color:#111; background:#f4a300; margin-top:8px; }
+  .small { font-size:12px; color:#888; margin-top:8px; }
+  .ok { color:#7CFC00; }
+  .bad { color:#ff5555; }
   </style>
 </head>
 <body>
@@ -233,47 +196,40 @@ void handleRoot() {
     <div class="small" id="status">WiFi: unknown</div>
   </div>
 
-  <script>
-    async function fetchStatus() {
-      try {
-        const res = await fetch('/status');
-        const data = await res.json();
+<script>
+async function fetchStatus() {
+  try {
+    const res = await fetch('/status');
+    const data = await res.json();
 
-        document.getElementById('temp').textContent = data.temp_f.toFixed(1) + ' °F';
-        document.getElementById('hum').textContent  = data.humidity.toFixed(1) + ' %';
-        document.getElementById('rise').textContent = data.rise_percent.toFixed(1) + ' %';
+    document.getElementById('temp').textContent = data.temp_f.toFixed(1) + ' °F';
+    document.getElementById('hum').textContent  = data.humidity.toFixed(1) + ' %';
+    document.getElementById('rise').textContent = data.rise_percent.toFixed(1) + ' %';
 
-        const risePct = Math.max(0, Math.min(200, data.rise_percent));
-        document.getElementById('riseFill').style.width = Math.min(100, risePct) + '%';
+    const risePct = Math.max(0, Math.min(200, data.rise_percent));
+    document.getElementById('riseFill').style.width = Math.min(100, risePct) + '%';
 
-        const doubled = document.getElementById('doubled');
-        if (data.doubled) {
-          doubled.innerHTML = '<span class="bad">Starter has doubled!</span>';
-        } else {
-          doubled.innerHTML = '<span class="ok">Not doubled yet.</span>';
-        }
+    const doubled = document.getElementById('doubled');
+    if (data.doubled) doubled.innerHTML = '<span class="bad">Starter has doubled!</span>';
+    else doubled.innerHTML = '<span class="ok">Not doubled yet.</span>';
 
-        document.getElementById('status').textContent =
-          'WiFi: ' + (data.wifi_connected ? 'connected' : 'disconnected') +
-          ' • Uptime: ' + data.uptime_sec + 's';
+    document.getElementById('status').textContent =
+      'WiFi: ' + (data.wifi_connected ? 'connected' : 'disconnected') +
+      ' • Uptime: ' + data.uptime_sec + 's';
 
-      } catch (e) {
-        document.getElementById('status').textContent = 'Error fetching status';
-      }
-    }
+  } catch {
+    document.getElementById('status').textContent = 'Error';
+  }
+}
 
-    async function resetCycle() {
-      try {
-        await fetch('/reset', { method: 'POST' });
-        setTimeout(fetchStatus, 300);
-      } catch (e) {
-        alert('Failed to reset');
-      }
-    }
+async function resetCycle() {
+  await fetch('/reset', { method:'POST' });
+  setTimeout(fetchStatus, 300);
+}
 
-    fetchStatus();
-    setInterval(fetchStatus, 2000);
-  </script>
+fetchStatus();
+setInterval(fetchStatus, 2000);
+</script>
 </body>
 </html>
 )HTML";
@@ -288,17 +244,14 @@ void setup() {
   Serial.begin(115200);
   delay(100);
 
-  Serial.println();
-  Serial.println("Sourdough Monitor (ESP32 headless)");
+  Serial.println("\nSourdough Monitor (ESP32 Thing Plus Micro-B)");
 
   initDNS();
 
-  // Ask DHCP for IP, but suggest DNS servers
-  // On ESP32, WiFi.config with INADDR_NONE keeps DHCP but sets DNS.
   WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE, DNS1);
   WiFi.begin(WIFI_SSID, WIFI_PASS);
 
-  Serial.print("Connecting to WiFi");
+  Serial.print("Connecting");
   int attempts = 0;
   while (WiFi.status() != WL_CONNECTED && attempts < 60) {
     delay(500);
@@ -315,14 +268,25 @@ void setup() {
     Serial.println("WiFi failed, continuing offline.");
   }
 
-  // HTTP routes
+  // --- AHT20 INIT ---
+  Serial.println("Initializing AHT20…");
+  Wire.begin(SDA_PIN, SCL_PIN);
+
+  if (aht.begin()) {
+    sensorOK = true;
+    Serial.println("AHT20 OK!");
+  } else {
+    sensorOK = false;
+    Serial.println("AHT20 NOT detected!");
+  }
+
   server.on("/",        HTTP_GET,  handleRoot);
   server.on("/metrics", HTTP_GET,  handleMetrics);
   server.on("/status",  HTTP_GET,  handleStatus);
   server.on("/reset",   HTTP_POST, handleReset);
 
   server.begin();
-  Serial.println("HTTP server started on port 80");
+  Serial.println("HTTP server running.");
 }
 
 // ------------------------------------------------------
@@ -335,24 +299,25 @@ void loop() {
   if (now - lastUpdate >= 1000) {
     lastUpdate = now;
 
-    // TODO: replace this block with real sensor readings
-    // AHT20 temp/humidity + HC-SR04 calculated rise
-    tempF       += (random(-5,6) * 0.1);
-    humidityVal += (random(-3,4) * 0.1);
-    risePercent += (random(0,5)  * 0.2);
+    // ---------------------------
+    // REAL SENSOR READINGS
+    // ---------------------------
+    if (sensorOK) {
+      sensors_event_t humidity, temp;
+      aht.getEvent(&humidity, &temp);
 
-    tempF       = constrain(tempF, 68, 82);
-    humidityVal = constrain(humidityVal, 50, 75);
-    risePercent = constrain(risePercent, 0, 200);
-
-    // Alert when starter has doubled
-    if (risePercent >= 100 && !alertSent) {
-      if (sendSourdoughAlert()) {
-        alertSent = true;
-      }
+      humidityVal = humidity.relative_humidity;
+      tempF = temp.temperature * 9.0 / 5.0 + 32.0;
     }
 
-    // Reset alert flag when starter is low again
+    // NOTE: risePercent is still simulated until HC-SR04 is added:
+    risePercent += (random(0,5) * 0.2);
+    risePercent = constrain(risePercent, 0, 200);
+
+    if (risePercent >= 100 && !alertSent) {
+      if (sendSourdoughAlert()) alertSent = true;
+    }
+
     if (risePercent < 60) {
       alertSent = false;
     }
