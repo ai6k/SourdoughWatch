@@ -1,129 +1,154 @@
-## NOTE
-Sensor code for temp/humidity has been added to the Thing Plus code, still working on height.
-The Giga R1 takes advantage of the Giga Touchscreen, while the Sparkfun Thing Plus uses a Webserver.
+# 🥖 Sourdough Monitor
+### ESP32 Thing Plus Micro-B • AHT20 Temp/Humidity • HC-SR04 Rise Detection • Prometheus • ntfy Alerts
 
-## NOTE 2
-This project was created due to my reading the following article:
+This project is a **WiFi-enabled sourdough starter monitor** built on the  
+**SparkFun ESP32 Thing Plus (Micro-B)**. It tracks:
 
-https://ivanahuckova.medium.com/how-i-created-sourdough-monitoring-system-and-how-can-you-easily-make-one-too-58f9a65c43c5
+- 🌡️ Temperature (AHT20 / AM2301B)
+- 💧 Humidity (AHT20)
+- 📈 Starter rise using an HC-SR04 ultrasonic sensor  
+- 📱 Mobile-friendly web dashboard  
+- 📊 Prometheus metrics endpoint  
+- 🔔 ntfy.sh alerts when the starter *doubles*  
 
-# SourdoughWatch
-
-SourdoughWatch is a hardware + software project that monitors the health of a sourdough starter using an Arduino Giga R1 or Sparkfun Thinng Plus, sensors, and a 3.2" ILI9341 TFT display (Giga R1 only). It tracks temperature, humidity, rise activity, and feeding cycles, and shows everything on a simple, easy-to-read screen/webserver.
-
-The electronics are mounted in a 3D-printed wide-mouth mason jar lid.
-
-Replace NETWORK_SSID and NETWORK_PASS if you want prometheus metrics served direclty from the Giga R1/Thing Plus.
-
-Replace NTFY_HOST, NTFY_PORT and NTFY_PATH if you want alerts sent via ntfy (https://ntfy.sh/)
-
-If you have a different DNS (maybe Pi-Hole), replace DNS1_STR.
+Perfect for keeping an eye on fermentation curves, optimizing rise time, or  
+building a fully automated sourdough workflow.
 
 ---
 
-## Features
+## ⭐ Features
 
-- Real-time sourdough starter monitoring
-- Temperature and humidity tracking
-- Time since last feed (reset cycle)
-- Simple TFT display user interface
-- Physical "Reset Cycle" button
-- Uses a 3D-printed lid for a wide-mouth mason jar
+- **Real-time monitoring** of:
+  - Temperature (°F)
+  - Humidity (%)
+  - Ultrasonic distance (mm)
+  - Rise percentage (0–200%)
 
----
+- **Auto-baseline detection**  
+  Rise is calculated from the *distance change* after a new feeding/reset.
 
-## 3D Printed Lid
+- **Alerts** via ntfy when rise reaches **100%**.
 
-This project uses a 3D-printed lid designed for wide-mouth mason jars.
+- **Prometheus metrics** for Grafana dashboards.
 
-Original model by **Dan.K** on Printables:  
-https://www.printables.com/model/174724-wide-mouth-mason-jar-lid
+- **Local JSON API** and a clean, responsive HTML dashboard.
 
-You can print the lid as-is or modify it to suit your display and sensor layout.
-
----
-
-## Hardware Used
-
-- Arduino Giga R1
-- 3.2" ILI9341 SPI TFT display
-- DHT22 or AHT20 temperature/humidity sensor
-- Pushbutton for reset cycle
-- 3D-printed wide-mouth mason jar lid
-- Assorted jumper wires
-- USB-C cable or 5V power source
+- **DNS override support** for Pi-hole or custom networks.
 
 ---
 
-## Wiring Overview
+## 🧰 Hardware Required
 
-Actual pin assignments in your sketch take precedence, but a typical setup looks like this:
-
-### TFT Display (ILI9341 over SPI)
-
-| TFT Pin | Arduino Giga R1 Pin |
-|---------|----------------------|
-| VCC     | 5V                   |
-| GND     | GND                  |
-| CS      | D10 (example)        |
-| RESET   | D9                   |
-| DC      | D8                   |
-| MOSI    | MOSI (D11)           |
-| MISO    | MISO (D12)           |
-| SCK     | SCK (D13)            |
-| LED     | 3.3–5V (optionally through a resistor) |
-
-### Temperature/Humidity Sensor (DHT22 / AHT20)
-
-| Sensor Pin | Arduino Pin |
-|------------|-------------|
-| VCC        | 3.3V or 5V  |
-| GND        | GND         |
-| DATA       | D7 (example) |
-
-### Reset Button
-
-| Button Pin | Arduino Pin |
-|------------|-------------|
-| One side   | D6          |
-| Other side | GND         |
+| Component | Notes |
+|----------|-------|
+| **SparkFun ESP32 Thing Plus (Micro-B)** | Main MCU |
+| **AHT20 / AM2301B (Wired Enclosed)** | I²C temp/humidity sensor |
+| **HC-SR04 Ultrasonic** | Measures starter height |
+| **2× 10 kΩ resistors** | Required for Echo voltage divider |
+| USB cable | For flashing/power |
+| Jar stand / mounting | To position sensor above starter |
 
 ---
 
-## Installation
+## 🔌 Wiring Guide
 
-1. Clone the repository:
+### AHT20 (AM2301B)
 
-   ```bash
-   git clone https://github.com/ai6k/SourdoughWatch.git
-   cd SourdoughWatch
-   ```
-
-2. Open the `.ino` file in the **Arduino IDE**.
-
-3. Install the required libraries (via Library Manager or manually):
-   - Adafruit_GFX
-   - Adafruit_ILI9341
-   - DHT sensor library or Adafruit AHTX0
-   - Any other libraries referenced at the top of the sketch
-
-4. In the Arduino IDE, select:
-   - **Board:** Arduino Giga R1
-   - **Port:** the port your board is connected to
-
-5. Click **Upload** to flash the sketch to the board.
+| Wire | ESP32 Pin |
+|------|-----------|
+| **Red** | 3.3V |
+| **Black** | GND |
+| **Yellow** | SDA (GPIO 23) |
+| **White** | SCL (GPIO 22) |
 
 ---
 
-## Future Enhancements
+### HC-SR04 Ultrasonic Sensor
 
-- WiFi logging and historical graphs
-- Weight/scale integration for more accurate rise tracking
-- Mobile or web notifications
-- Different lid/enclosure styles for other jar sizes
+| HC-SR04 Pin | ESP32 Pin | Notes |
+|-------------|-----------|-------|
+| **VCC** | 5V (VUSB) | Sensor requires 5V |
+| **GND** | GND | Common ground required |
+| **Trig** | GPIO 19 | Direct connection |
+| **Echo** | GPIO 18 | **Must use voltage divider!** |
+
+#### Echo Voltage Divider (Required!)
+
+```
+HC-SR04 Echo ----[10kΩ]----+----> ESP32 GPIO 18
+                           |
+                         [10kΩ]
+                           |
+                          GND
+```
 
 ---
 
-## License
+## 🛠️ Software Setup
 
-This project is open-source under the MIT License.
+1. Install Arduino libraries:
+   - Adafruit AHTX0
+   - WebServer  
+   - ESP32 board support
+
+2. Flash the firmware in this repo.
+
+---
+
+## 🌐 Web Dashboard
+
+Open:
+
+```
+http://<device-ip>/
+```
+
+---
+
+## 📡 API Endpoints
+
+### **GET /status**  
+Returns JSON containing temperature, humidity, distance, rise %, and uptime.
+
+### **POST /reset**  
+Resets rise detection baseline and alert state.
+
+### **GET /metrics**  
+Prometheus scrape endpoint with all sensor values.
+
+---
+
+## 🔔 Alerts
+
+Alerts are sent to your configured ntfy server when risePercent ≥ 100%.
+
+---
+
+## 📏 Rise Calculation Explained
+
+```
+rise_mm = baseline_mm - current_mm
+risePercent = (rise_mm / TARGET_RISE_MM) * 100
+```
+
+Where `TARGET_RISE_MM` defaults to **50 mm**.
+
+---
+
+## 🧪 Tips
+
+- Keep the ultrasonic sensor stable and centered above the jar.
+- Reset cycle after feeding to create a new baseline.
+- Adjust `TARGET_RISE_MM` for your jar height.
+
+---
+
+## 📜 License
+
+MIT License.
+
+---
+
+## ❤️ Credits
+
+Built by **David Berkompas (AI6K)** with code pairing from ChatGPT.
