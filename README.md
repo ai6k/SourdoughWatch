@@ -1,5 +1,5 @@
 ## NOTE
-The sensor code hasn't been incorporated yet, I'm waiting for them to arrive from Adafruit.
+Sensor code for temp/humidity has been added, still working on height.
 The Giga R1 takes advantage of the Giga Touchscreen, while the Sparkfun Thing Plus uses a Webserver.
 
 ## NOTE 2
