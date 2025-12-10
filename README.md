@@ -1,5 +1,5 @@
 ## NOTE
-Sensor code for temp/humidity has been added, still working on height.
+Sensor code for temp/humidity has been added to the Thing Plus code, still working on height.
 The Giga R1 takes advantage of the Giga Touchscreen, while the Sparkfun Thing Plus uses a Webserver.
 
 ## NOTE 2
